@@ -1,0 +1,3 @@
+<engine:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <engine:Slider label="Slider" value="42" high-value="100" name="debugSlider" style="transform-origin: center; bottom: 0; position: absolute; width: 340px; left: auto; right: auto;" />
+</engine:UXML>

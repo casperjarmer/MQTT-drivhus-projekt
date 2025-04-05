@@ -6,7 +6,7 @@ using System.Text;
 using uPLibrary.Networking.M2Mqtt;
 using uPLibrary.Networking.M2Mqtt.Messages;
 
-public class MQTTClient : MonoBehaviour
+public class MQTTClient: MonoBehaviour
 {
     private MqttClient client;
     // private string broker = "test.mosquitto.org"; // Another free online broker
