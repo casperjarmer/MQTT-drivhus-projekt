@@ -1,101 +1,55 @@
 ﻿using UnityEngine;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Text;
 using uPLibrary.Networking.M2Mqtt;
 using uPLibrary.Networking.M2Mqtt.Messages;
-using UnityEngine.UIElements;
 
 public class MQTTClientMads : MonoBehaviour
 {
     private MqttClient client;
-    private string broker = "10.126.128.221"; // Local private broker
+    // private string broker = "test.mosquitto.org"; // Another free online broker
+    //private string broker = "mqtt.eclipseprojects.io";
+    private string broker = "10.126.128.222"; // Used to connect to a lokal private broker
 
-    // Topic for the rod's position
-    private string rodPositionTopic = "rod/position";
-    private float rodPosition = 0.0f; // Stores received rod position value
+    private string climateRoofMotorTopic = "climate_roof_motor"; // Topic for motor
+    public string RoofMotorValue = ""; // Stores received motor value
 
-    // The GameObjects in the scene
-    public GameObject windowObject; // Window digital twin
-    public GameObject rodObject;    // Rod digital twin
+    // The gameobjects in the scene
+    public GameObject MotorRod;
+    public GameObject Roof;
 
-    // Calibration parameters for the rod's real-world position.
-    // Adjust these based on your actual measurements.
-    public float minRodPos = 0.0f;    // Rod's fully closed position (real-world value)
-    public float maxRodPos = 100.0f;  // Rod's fully open position (real-world value)
-
-    // Calibration parameters for the window's rotation in Unity.
-    public float minAngle = 0.0f;     // Window closed angle in Unity
-    public float maxAngle = 90.0f;    // Window fully open angle in Unity
-
-    // Positions for the rod object in Unity.
-    // Set these in the Inspector to match the closed/open states of the rod.
-    public Vector3 rodClosedPosition; // Rod's position when fully closed
-    public Vector3 rodOpenPosition;   // Rod's position when fully open
-
-    // Debugging slider to simulate rod position without MQTT
-    public bool useDebugSlider = true;  // Toggle to use slider input for debugging
-    public GameObject uiDocumentObject; // Reference to the UI Document GameObject
-    private Slider debugSlider;  // Reference to the UI slider in the scene
+    // Animation
+    public Animator RoofAnimator;
+    public Animator MotorRodAnimator;
 
     void Start()
     {
-        Application.runInBackground = true;
+        RoofAnimator.SetBool("open", true);
+        MotorRodAnimator.SetBool("open", true);
 
-        // Load the UIDocument and reference the Slider
-        if (uiDocumentObject != null)
+        StartCoroutine(Test());
+
+        Application.runInBackground = true;  // Ensures the game runs even when out of focus, so you can click on the webpage and see the outpot in Unity 
+
+        // Connect to MQTT broker
+        client = new MqttClient(broker);
+        client.MqttMsgPublishReceived += OnMessageReceived;
+
+        string clientId = Guid.NewGuid().ToString();
+        client.Connect(clientId);
+
+
+        if (client.IsConnected)
         {
-            var uiDocument = uiDocumentObject.GetComponent<UIDocument>();
-            if (uiDocument != null)
-            {
-                var root = uiDocument.rootVisualElement;
-                debugSlider = root.Q<Slider>("debugSlider");
-
-                if (debugSlider != null)
-                {
-                    debugSlider.lowValue = minRodPos;
-                    debugSlider.highValue = maxRodPos;
-                    debugSlider.value = minRodPos;
-                    Debug.Log($"Debug slider initialized: lowValue={debugSlider.lowValue}, highValue={debugSlider.highValue}, value={debugSlider.value}");
-                }
-                else
-                {
-                    Debug.LogError("Debug slider reference is not set!");
-                }
-            }
-            else
-            {
-                Debug.LogError("UIDocument component is not found!");
-            }
+            Debug.Log("Connected to MQTT Broker!");
+            // How to subscribe to the topics 
+            client.Subscribe(new string[] { climateRoofMotorTopic }, new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
         }
         else
         {
-            Debug.LogError("UI Document GameObject reference is not set!");
-        }
-
-        if (!useDebugSlider)
-        {
-            // Connect to the MQTT broker if not in debug mode
-            client = new MqttClient(broker);
-            client.MqttMsgPublishReceived += OnMessageReceived;
-
-            string clientId = Guid.NewGuid().ToString();
-            client.Connect(clientId);
-
-            if (client.IsConnected)
-            {
-                Debug.Log("Connected to MQTT Broker!");
-                // Subscribe to the rod position topic
-                client.Subscribe(new string[] { rodPositionTopic }, new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
-            }
-            else
-            {
-                Debug.LogError("Failed to connect to MQTT Broker!");
-            }
-        }
-        else
-        {
-            Debug.Log("Debug mode enabled. Using slider input.");
+            Debug.LogError("Failed to connect to MQTT Broker!");
         }
     }
 
@@ -104,34 +58,46 @@ public class MQTTClientMads : MonoBehaviour
         string message = Encoding.UTF8.GetString(e.Message);
         Debug.Log($"Received: {e.Topic} - {message}");
 
-        // Process only the rod position data
-        if (e.Topic == rodPositionTopic)
+        if (e.Topic == climateRoofMotorTopic)
         {
-            float.TryParse(message, out rodPosition);
+            RoofMotorValue = message;
+
         }
     }
 
     void Update()
     {
-        // If in debug mode, override rodPosition with the slider value
-        if (useDebugSlider && debugSlider != null)
+        if (RoofMotorValue == "o")  // If ledValue is "o"
         {
-            rodPosition = debugSlider.value;
+            StartCoroutine(Extend());  // Start the coroutine to blink material
+        }
+        if (RoofMotorValue == "c")  // If ledValue is "c"
+        {
+            StartCoroutine(Retract());  // Start the coroutine to blink material
         }
 
-        // Normalize the rod's position between minRodPos and maxRodPos
-        float normalizedValue = Mathf.InverseLerp(minRodPos, maxRodPos, rodPosition);
+    }
 
-        // Map the normalized value to the window's rotation angle
-        float windowAngle = Mathf.Lerp(minAngle, maxAngle, normalizedValue);
-        // Apply the rotation to the window object (assuming rotation around the Y-axis)
-        windowObject.transform.rotation = Quaternion.Euler(0, 0, windowAngle);
+    private IEnumerator Extend()
+    {
+        RoofAnimator.SetBool("open", true);
+        MotorRodAnimator.SetBool("open", true);
+        yield return new WaitForSeconds(0.5f);
+    }
 
-        // Interpolate the rod object's position between the closed and open positions
-        rodObject.transform.position = Vector3.Lerp(rodClosedPosition, rodOpenPosition, normalizedValue);
+    private IEnumerator Retract()
+    {
+        RoofAnimator.SetBool("open", false);
+        MotorRodAnimator.SetBool("open", false);
+        yield return new WaitForSeconds(0.5f);
+    }
 
-        // Debug log for verification
-        Debug.Log($"Rod Position: {rodPosition} (normalized: {normalizedValue}) => Window Angle: {windowAngle}");
+    private IEnumerator Test()
+    {
+        yield return new WaitForSeconds(3f);
+        RoofAnimator.SetBool("open", false);
+        MotorRodAnimator.SetBool("open", false);
+        yield return new WaitForSeconds(0.5f);
     }
 
     void OnDestroy()

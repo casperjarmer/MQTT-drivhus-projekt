@@ -10,13 +10,12 @@ public class MQTTClient: MonoBehaviour
 {
     private MqttClient client;
     // private string broker = "test.mosquitto.org"; // Another free online broker
-    //private string broker = "mqtt.eclipseprojects.io";
-    private string broker = "10.126.128.221"; // Used to connect to a lokal private broker
+    private string broker = "mqtt.eclipseprojects.io";
+    //private string broker = "10.126.128.221"; // Used to connect to a lokal private broker
 
     private string potTopic = "arduino/potentiometerC"; // Topic for potentiometer
     private string butTopic = "arduino/buttonC";
-    private string climateRoofMotorTopic = "climate_roof_motor"; // Topic for led
-
+    private string climateRoofMotorTopic = "climate_roof_motor"; // Topic for motor
     private int potValue = 0; // Stores received potentiometer value
     private int butValue = 0;
     public string LEDValue = ""; // Stores received led value
