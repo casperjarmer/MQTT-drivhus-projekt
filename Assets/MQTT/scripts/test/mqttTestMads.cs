@@ -17,11 +17,15 @@ public class MQTTClientMads : MonoBehaviour
     public string RoofMotorValue = ""; // Stores received motor value
     private string climateFanMotorTopic = "climate_fan_motor"; // Topic for fan
     public string fanMotorValue = ""; // Stores received fan value
+    private string UVLightTopic = "climate_uv_light"; // Topic for fan
+    public string UVLightValue = ""; // Stores received fan value
 
     // The gameobjects in the scene
     public GameObject MotorRod;
     public GameObject Roof;
     public GameObject Fan;
+    public GameObject UVLightRed;
+    public GameObject UVLightBlue;
 
     private int fanRotationSpeed = 1000; // Rotation speed in degrees per second
     private bool rotateFan = false; // Flag to control fan rotation
@@ -53,7 +57,7 @@ public class MQTTClientMads : MonoBehaviour
             // How to subscribe to the topics 
             client.Subscribe(new string[] { climateRoofMotorTopic }, new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
             client.Subscribe(new string[] { climateFanMotorTopic }, new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
-
+            client.Subscribe(new string[] { UVLightTopic }, new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
         }
         else
         {
@@ -74,6 +78,10 @@ public class MQTTClientMads : MonoBehaviour
         if (e.Topic == climateFanMotorTopic)
         {
             fanMotorValue = message;
+        }
+        if (e.Topic == UVLightTopic)
+        {
+            UVLightValue = message;
         }
     }
 
@@ -96,6 +104,17 @@ public class MQTTClientMads : MonoBehaviour
         if (fanMotorValue == "s")  // If fanValue is "s"
         {
             Fan.transform.Rotate(new Vector3(0, 0, 0) * Time.deltaTime);
+        }
+
+        if (UVLightValue == "u")  // If ledValue is "u"
+        {
+            UVLightRed.SetActive(true);
+            UVLightBlue.SetActive(true);
+        }
+        if (UVLightValue == "v")  // If ledValue is "v"
+        {
+            UVLightRed.SetActive(false);
+            UVLightBlue.SetActive(false);
         }
 
     }
